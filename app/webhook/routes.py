@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from datetime import datetime
 from app.extensions import github_events
 
@@ -26,13 +26,32 @@ def github_webhook():
         action = "PUSH"
 
     elif event_type == "pull_request":
+        pr_action = data.get("action")  # "opened", "closed", etc.
         pr = data.get("pull_request", {})
-        request_id = str(pr.get("id"))
-        author = pr.get("user", {}).get("login", "unknown")
-        from_branch = pr.get("head", {}).get("ref")
-        to_branch = pr.get("base", {}).get("ref")
-        action = "PULL REQUEST"
 
+        # Handle only 'opened' pull requests
+        if pr_action == "opened":
+            request_id = str(pr.get("id"))
+            author = pr.get("user", {}).get("login", "unknown")
+            from_branch = pr.get("head", {}).get("ref")
+            to_branch = pr.get("base", {}).get("ref")
+            action = "PULL REQUEST"
+
+        # Handle merged pull requests (i.e., merged == true and action == "closed")
+        elif pr_action == "closed" and pr.get("merged", False):
+            request_id = str(pr.get("id"))
+            author = pr.get("user", {}).get("login", "unknown")
+            from_branch = pr.get("head", {}).get("ref")
+            to_branch = pr.get("base", {}).get("ref")
+            action = "MERGE"
+
+        else:
+            return jsonify({"message": f"Ignored pull_request action: {pr_action}"}), 200
+
+    else:
+        return jsonify({"message": f"Ignored event type: {event_type}"}), 200
+
+    # Build and insert event
     event = {
         "request_id": request_id,
         "author": author,
@@ -48,10 +67,16 @@ def github_webhook():
     return jsonify({"message": "Event stored", "event": event}), 201
 
 
-
+# This route displays the latest events
 @webhook_bp.route("/latest-events", methods=["GET"])
 def latest_events():
     events = list(github_events.find().sort("timestamp", -1).limit(10))
     for e in events:
         e["_id"] = str(e["_id"])
     return jsonify({"events": events})
+
+
+# This route serves the index.html
+@webhook_bp.route("/")
+def index():
+    return render_template("index.html")

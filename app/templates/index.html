@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -28,12 +28,12 @@
   </style>
 </head>
 <body>
-  <h1>📦 GitHub Webhook Events</h1>
+  <h1>GitHub Webhook Events</h1>
   <div id="events">Loading...</div>
 
   <script>
-    const apiUrl = "https://e147-2401-4900-57c5-178a-8049-e358-4aba-452f.ngrok-free.app/latest-events"; // 👈 Replace this with your ngrok URL
-
+    const apiUrl = "/latest-events";
+                    
     async function fetchEvents() {
       try {
         const res = await fetch(apiUrl);
